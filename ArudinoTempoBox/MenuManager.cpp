@@ -2,6 +2,7 @@
 #ifndef MENUMANAGER_cpp
 #define MENUMANAGER_cpp
 
+#include "Definitions.h"
 #include "Arduino.h"
 #include "MenuManager.h"
 
@@ -9,19 +10,18 @@ int enterButtonPin = 4; // This Pin Should ride
 
 void selectPressed();
 
-struct MenuItem {
-  String title;
-  byte ID;
-};
-
 void MenuManager::initialize()
 {
-  currentMenu = 0;
+  oldEncoderPosition = 0;
+  currentMenuLevel = 0;
   currentMenuSelection = 0;
   parameterEditorActive = LOW;
   menuActive = LOW;
   buttonState = LOW;
 }
+
+const byte menuRootID = 0;
+MenuItem menuRoot[4] = {{"Output 1", 0},{"Output 2", 1},{"Output 3", 2},{"Output 4", 3}};
 
 void MenuManager::processLoop()
 {
@@ -36,27 +36,54 @@ void MenuManager::processLoop()
       buttonState = LOW;
     }
   }
+  if (menuActive) { 
+    // Read the encoder
+    int newPosition = menuEncoder->read();
+    if (abs(oldEncoderPosition - newPosition) > 3) { // check that the encoder has moved a notch at least
+      if (parameterEditorActive) { 
+        
+      } else { // We are in a menu and we should select accordingly
+        int menuItemCount = currentMenuCount + 1; // Items + "Exit"
+        int selectionDelta = (newPosition - oldEncoderPosition)/3;
+        currentMenuSelection = (currentMenuSelection + selectionDelta) % menuItemCount;
+        if (currentMenuSelection < 0) { // wrap properly for negative values
+          currentMenuSelection = menuItemCount + currentMenuSelection;
+        }
+        if (currentMenuSelection == menuItemCount-1) {
+          MenuItem exitItem = {"Exit", 222};
+          pushMenuItem(exitItem);
+        } else {
+          pushMenuItem(currentMenu[currentMenuSelection]);
+        }
+      }
+      oldEncoderPosition = newPosition;
+    }
+  }
 }
-
-const byte menuRootID = 0;
-MenuItem menuRoot = {"MainMenu", menuRootID};
 
 const int menuAdjustRates = 1;
 
 void MenuManager::selectPressed()
 {
-  if (menuActive = LOW) {
+  if (menuActive == LOW) {
     menuActive = HIGH;
-    return;
+    oldEncoderPosition = menuEncoder->read();
+    currentMenuLevel = 0;
+    pushMenuWithID(menuRootID);
+    delegate->menuBecameActive();
   }
   if (parameterEditorActive) {
     popParameterEditor();
     return;
   }
-  switch (currentMenu)
+}
+
+void MenuManager::pushMenuWithID(int menuID)
+{
+  switch (menuID)
   {
     case menuRootID:
-       
+       pushMenu("Menu", menuRoot, sizeof(menuRoot)/sizeof(MenuItem));
        break;
     case menuAdjustRates:
        
@@ -64,9 +91,20 @@ void MenuManager::selectPressed()
   }
 }
 
-void MenuManager::pushMenuItem(String title, String subtitle, int menuID)
+void MenuManager::pushMenu(String title, MenuItem menuItems[], int itemCount)
 {
-  
+  currentMenuCount = itemCount;
+  currentMenu = menuItems;
+  menuTitleString = title;
+  pushMenuItem(menuItems[0]);
+}
+
+void MenuManager::pushMenuItem(MenuItem item)
+{
+  menuLCD->clear();
+  menuLCD->print(menuTitleString);
+  menuLCD->selectLine(2);
+  menuLCD->print(item.title);
 }
 
 void MenuManager::popParameterEditor()

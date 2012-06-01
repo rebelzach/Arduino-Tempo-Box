@@ -12,12 +12,14 @@ TempoAppController appController;
 void setup() 
 { 
   appController.initialize();
+
   loopStartTime = millis();
 }
 
 void loop() 
 {
   appController.processLoop();
+  
   loopCounter++;
   if (millis() - loopStartTime > 10000) {
     debugPrint("Loop: ");

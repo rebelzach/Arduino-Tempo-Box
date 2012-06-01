@@ -4,6 +4,7 @@
 
 #include "Definitions.h"
 #include "Arduino.h"
+#include "MenuManager.h"
 #include "TempoAppController.h"
 
 int LCDpin = A5;
@@ -21,10 +22,11 @@ void TempoAppController::initialize()
   lcd.clear();
   lcd.print("Beatmaster 5000"); 
   delay(500); // See the Awesome startup text
-
+  encoderOffset = 0;
   menuController.initialize();
   menuController.menuLCD = &lcd;
   menuController.menuEncoder = &myEnc;
+  menuController.delegate = this;
   tempoController.initialize();
   tempoController.setTempoChangeCallback(tempoChanged);
   lcd.clear();
@@ -41,6 +43,16 @@ void TempoAppController::processLoop()
   } else {
     readEncoder();
   }
+}
+
+void TempoAppController::menuBecameActive()
+{
+  // Do Nothing now, but you can't delete this function
+}
+
+void TempoAppController::menuBecameInactive()
+{
+  encoderOffset = myEnc.read();
 }
 
 void tempoChanged(float tempo)

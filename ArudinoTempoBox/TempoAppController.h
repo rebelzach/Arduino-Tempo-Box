@@ -13,11 +13,13 @@ class TempoAppController: public MenuManagerDelegate
   public:
     // properties
     
-    
     // methods
     void initialize();
     void processLoop();
+    void menuBecameActive();
+    void menuBecameInactive();
   private:
+    int encoderOffset;
     void readEncoder();
 };
 
