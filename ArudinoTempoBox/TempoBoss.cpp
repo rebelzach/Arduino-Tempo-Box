@@ -22,8 +22,6 @@ const int encRed = 5;
 const int encGreen = 6;
 const int encBlue = 11;
 
-TempoBoss TempoBoss1;
-
 #define TAP_TIMEOUT 2000000
 #define TAP_MINIMUM 8000
 #define TIMER_QUANTUM 100
@@ -101,7 +99,7 @@ volatile boolean tapsProcessed = YES;
 boolean triggerState = LOW;
 unsigned long outputStartTime;
 
-void processPendingTempoTaps()
+void TempoBoss::processPendingTempoTaps()
 {
   if (triggerState == LOW) {
     if (digitalRead(TAP_TEMPO_PIN) == HIGH) { // Pin 2 low button down
@@ -148,7 +146,7 @@ void processPendingTempoTaps()
   }
 }
 
-void tempoTapped()
+void TempoBoss::tempoTapped()
 {
   unsigned long currentTime = micros();
   if (!tapsProcessed) {
@@ -179,7 +177,7 @@ inline boolean shouldDebounce(unsigned long pulseLength)
   return (pulseLength < TAP_MINIMUM);
 }
 
-float calculateTempo() 
+float TempoBoss::calculateTempo() 
 {
   long totalPulseLength = 0;
   for (int i = 0; i <= pulseBufferCount ; i++) {
@@ -193,8 +191,8 @@ float calculateTempo()
   }
   calculateAndSetIntervals(averagePulseLength);
   float bpm = 60000000.0f / averagePulseLength; // Microseconds to BPM
-  if (TempoBoss1.tempoChangeCallback) {
-    TempoBoss1.tempoChangeCallback(bpm);
+  if (tempoChangeCallback) {
+    tempoChangeCallback(bpm);
   }
   return bpm;
 }
@@ -210,18 +208,12 @@ void TempoBoss::setTempo(float tempo)
   calculateAndSetIntervals(averagePulseLength); // 120BPM
 }
 
-void calculateAndSetIntervals(unsigned long quarterBeatPulseLength) 
+
+void TempoBoss::calculateAndSetIntervals(unsigned long quarterBeatPulseLength) 
 {  
   unsigned long compensatedPulseLength = quarterBeatPulseLength;
-  bitClear(quarterBeatPulseLength, 0); // Make it even
-  //debugPrint("Compensated and pwm: ");
-  //debugPrintln(compensatedPulseLength);
-  //pwmUpdateStep = quarterBeatPulseLength/2/126;
+  bitClear(quarterBeatPulseLength, 0); // Make |quarterBeatPulseLength| even
   pwmUpdateStep = quarterBeatPulseLength/10;
-  //debugPrintln(pwmUpdateStep);
-  //Coloring
-  //float rangedTempo = (60000000.0f / averagePulseLength)/150;
-  //debugPrintln(rangedTempo);
   
   microsecondInterval[0] = (compensatedPulseLength / pedalPulseRateSetting[0]);
   microsecondInterval[1] = (compensatedPulseLength / pedalPulseRateSetting[1]);
@@ -229,7 +221,7 @@ void calculateAndSetIntervals(unsigned long quarterBeatPulseLength)
   microsecondInterval[3] = (compensatedPulseLength / pedalPulseRateSetting[3]);
 }
 
-void resetPulseCounters() 
+void TempoBoss::resetPulseCounters() 
 {
   debugPrintln("Reset");
   debugPrintln(microsecondInterval[1]);
@@ -262,7 +254,6 @@ void pulseInterrupt() {
   microsecondCounter[3] += TIMER_QUANTUM;
   beatCounter += TIMER_QUANTUM;
   pwmUpdateCounter += TIMER_QUANTUM;
-  //beatLevel = (beatCounter/averagePulseLength) * 255;
   if (beatCounter > averagePulseLength) {
     beatCounter = beatCounter - averagePulseLength;
     pwmUpdateCounter = beatCounter;

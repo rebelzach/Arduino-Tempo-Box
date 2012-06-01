@@ -25,7 +25,13 @@ class TempoBoss
     void processLoop();
     void setTempoChangeCallback(void (*changeCallback)(float));
     void setTempo(float tempo);
+    
+  private:
+    void processPendingTempoTaps();
+    void tempoTapped();
+    float calculateTempo();
+    void calculateAndSetIntervals(unsigned long quarterBeatPulseLength);
+    void resetPulseCounters();
 };
 
-extern TempoBoss TempoBoss1;
 #endif

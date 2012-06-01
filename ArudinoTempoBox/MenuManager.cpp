@@ -5,8 +5,6 @@
 #include "Arduino.h"
 #include "MenuManager.h"
 
-MenuManager MenuManager1;
-
 int enterButtonPin = 4; // This Pin Should ride 
 
 void selectPressed();

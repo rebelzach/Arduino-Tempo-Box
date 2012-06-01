@@ -26,6 +26,10 @@ class MenuManager
     void pushMenuItem(String title, String subtitle, int menuID);
 };
 
-extern MenuManager MenuManager1;
+class MenuManagerDelegate {
+  public:
+    virtual void menuBecameActive() {};
+    virtual void menuBecameInactive() {};
+};
 
 #endif
