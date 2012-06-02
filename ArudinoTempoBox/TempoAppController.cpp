@@ -50,29 +50,31 @@ void TempoAppController::menuBecameActive()
   // Do Nothing now, but you can't delete this function
 }
 
+long oldPosition = 0;
+
 void TempoAppController::menuBecameInactive()
 {
-  encoderOffset = myEnc.read();
+  encoderOffset = myEnc.read() - oldPosition;
+  tempoChanged(tempoController.getTempo());
 }
+
 
 void tempoChanged(float tempo)
 {
+  debugPrintln("Updating BPM on LCD");
   lcd.clear();
   lcd.print("   BPM: ");
   int tempoInt = tempo;
   lcd.print(tempoInt);
 }
 
-long oldPosition = 0;
-
 void TempoAppController::readEncoder()
 {
-  long newPosition = myEnc.read();
+  long newPosition = myEnc.read() - encoderOffset;
   if (newPosition != oldPosition) {
     oldPosition = newPosition;
     tempoController.setTempo((newPosition/4) + 120);
     tempoChanged((newPosition/4) + 120);
-    //Serial.println(newPosition);
   }
 }
 

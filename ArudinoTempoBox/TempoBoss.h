@@ -25,8 +25,10 @@ class TempoBoss
     void processLoop();
     void setTempoChangeCallback(void (*changeCallback)(float));
     void setTempo(float tempo);
+    float getTempo();
     
   private:
+    float tempo;
     void processPendingTempoTaps();
     void tempoTapped();
     float calculateTempo();

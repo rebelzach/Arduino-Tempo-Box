@@ -3,6 +3,7 @@
 #include <SoftwareSerial.h>
 #include <serLCD.h>
 #include <Encoder.h>
+#include <EEPROM.h>
 
 unsigned long loopCounter = 0;
 unsigned long loopStartTime = 0;

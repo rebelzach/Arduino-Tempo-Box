@@ -26,10 +26,12 @@ class MenuManager
     Encoder *menuEncoder;
     serLCD *menuLCD;
     MenuManagerDelegate *delegate;
+    long menuTimeoutTimer;
     
     // methods
     void initialize();
     void processLoop();
+    void exitMenu();
     
   private:
     int menuHistory[MAX_MENU_LEVELS];
@@ -44,12 +46,37 @@ class MenuManager
     // methods
     MenuItem *currentMenu;
     void selectPressed();
-    
-    void pushMenu(String title, MenuItem menuItems[], int itemCount);
-    void pushMenuItem(MenuItem item);
-    void pushMenuWithID(int menuID);
+    void resetMenuTimeout();
+    void displayMenu(String title, MenuItem menuItems[], int itemCount);
+    void displayMenuItem(MenuItem item);
+    void displayOptionPropertyEditor(String title, 
+                                     char* options,
+                                     int optionsCount,
+                                     int initialChoice,
+                                     void (*selectCallback)(int),
+                                     String optionalRootValue);
+    void displayNumericPropertyEditor(String title, 
+                                     String unit,
+                                     String rootOption,
+                                     int incrementValue,
+                                     int rangeHigh,
+                                     int rangeLow,
+                                     int initialValue,
+                                     void (*selectCallback)(int),
+                                     String optionalRootValue);
+    void pushMenuWithID(byte menuID);
     void popParameterEditor();
     void popCurrentMenu();
+};
+
+extern int outputAddresses[];
+
+enum settingBytes {
+  rate = 0,
+  polarity,
+  pulseCount,
+  pulseLengthHighByte,
+  pulseLengthLowByte,
 };
 
 #endif

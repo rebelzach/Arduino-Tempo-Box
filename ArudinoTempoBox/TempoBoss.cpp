@@ -202,10 +202,16 @@ void TempoBoss::setTempoChangeCallback(void (*changeCallback)(float))
   tempoChangeCallback = changeCallback;
 }
 
-void TempoBoss::setTempo(float tempo)
+void TempoBoss::setTempo(float newTempo)
 {
+  tempo = newTempo;
   averagePulseLength = 1000000 * (60.0/tempo);
   calculateAndSetIntervals(averagePulseLength); // 120BPM
+}
+
+float TempoBoss::getTempo()
+{
+  return tempo;
 }
 
 
