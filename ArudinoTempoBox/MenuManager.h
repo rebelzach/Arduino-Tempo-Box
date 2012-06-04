@@ -4,6 +4,7 @@
 #include "Arduino.h"
 #include <serLCD.h>
 #include <Encoder.h>
+#include "TempoBoss.h"
 
 class MenuManagerDelegate {
   public:
@@ -22,10 +23,12 @@ class MenuManager
 {
   public:
     // properties
+    byte menuHistory[MAX_MENU_LEVELS];
     boolean menuActive;
     Encoder *menuEncoder;
     serLCD *menuLCD;
     MenuManagerDelegate *delegate;
+    TempoBoss *tempoController;
     long menuTimeoutTimer;
     
     // methods
@@ -34,13 +37,14 @@ class MenuManager
     void exitMenu();
     
   private:
-    byte menuHistory[MAX_MENU_LEVELS];
+    
     int currentMenuSelection;
     int currentMenuCount;
     boolean buttonState;
     
     boolean parameterEditorActive;
-    void (*parameterSelectedCallback)(int);
+    boolean parameterEditorUpdateOnChange;
+    void (*parameterSelectedCallback)(MenuManager*,int);
     char **parameterOptions;
     String parameterUnit; 
     String parameterRoot;
@@ -63,15 +67,17 @@ class MenuManager
                                      char* options[],
                                      int optionsCount,
                                      int initialChoice,
-                                     void (*selectCallback)(int));
+                                     void (*selectCallback)(MenuManager*, int),
+                                     boolean updateOnSettingChange);
     void displayNumericPropertyEditor(String title, 
                                      String unit,
                                      int incrementValue,
                                      int rangeHigh,
                                      int rangeLow,
                                      int initialValue,
-                                     void (*selectCallback)(int),
-                                     String optionalRootValue);
+                                     void (*selectCallback)(MenuManager*, int),
+                                     String optionalRootValue,
+                                     boolean updateOnSettingChange);
     void pushMenuWithID(byte menuID);
     void popParameterEditor();
     void popCurrentMenu();

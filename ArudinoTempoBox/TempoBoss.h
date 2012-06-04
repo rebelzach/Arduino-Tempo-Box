@@ -4,6 +4,9 @@
 
 #include "Arduino.h"
 
+extern volatile unsigned long microsecondPulseLenSetting[];
+extern float pedalPulseRateSetting[];
+
 void calculateAndSetIntervals(unsigned long quarterBeatPulseLength);
 void processPendingTempoTaps();
 void tempoTapped();
@@ -26,6 +29,7 @@ class TempoBoss
     void setTempoChangeCallback(void (*changeCallback)(float));
     void setTempo(float tempo);
     float getTempo();
+    void rePollSettings();
     
   private:
     float tempo;

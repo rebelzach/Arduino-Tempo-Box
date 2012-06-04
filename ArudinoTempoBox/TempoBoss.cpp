@@ -29,7 +29,7 @@ const int encBlue = 11;
 volatile unsigned long averagePulseLength;
 volatile unsigned long microsecondInterval[4] = {0,0,0,0};
 volatile unsigned long microsecondCounter[4] = {0,0,0,0};
-volatile unsigned long microsecondPulseLen[4] = {4294967292,100000,4294967292,4294967292};
+volatile unsigned long microsecondPulseLenSetting[4] = {4294967292,100000,4294967292,4294967292};
 volatile unsigned long beatCounter;
 float beatLevel = 255;
 volatile int pedalPulseCountSetting[4] = {8,4000,4000,16};
@@ -227,6 +227,11 @@ void TempoBoss::calculateAndSetIntervals(unsigned long quarterBeatPulseLength)
   microsecondInterval[3] = (compensatedPulseLength / pedalPulseRateSetting[3]);
 }
 
+void TempoBoss::rePollSettings()
+{
+  calculateAndSetIntervals(averagePulseLength);
+}
+
 void TempoBoss::resetPulseCounters() 
 {
   debugPrintln("Reset");
@@ -268,7 +273,7 @@ void pulseInterrupt() {
   if (pwmUpdateCounter > pwmUpdateStep) {
     pwmUpdateCounter = 0;
     if (beatLevel > 0) {
-      beatLevel -= 6;
+      beatLevel -= 20;
     }
   }
   incrementPulseCounter(0, output1pin, pedalPin1);
@@ -291,7 +296,7 @@ inline void incrementPulseCounter(int pulseIndex, int pin, int pedalPin)
     } else if (pedalPulseCounter[pulseIndex] == pedalPulseCountSetting[pulseIndex] + 1) {
       digitalWrite(pedalPin, pedalPulsePolaritySetting[pulseIndex]); //make sure we always end on the right polarity setting
     }
-  } else if (pinStateBuffer[pin] == HIGH && microsecondCounter[pulseIndex] > microsecondPulseLen[pulseIndex]) {
+  } else if (pinStateBuffer[pin] == HIGH && microsecondCounter[pulseIndex] > microsecondPulseLenSetting[pulseIndex]) {
     pinStateBuffer[pin] = LOW;
     digitalWrite(pin, pinStateBuffer[pin]);
   }

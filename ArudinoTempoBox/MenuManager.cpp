@@ -5,6 +5,7 @@
 #include "Definitions.h"
 #include "Arduino.h"
 #include "MenuManager.h"
+#include "TempoBoss.h"
 
 int outputAddresses[4] = {20,60,120,200};
 
@@ -12,9 +13,9 @@ int const MENU_TIMEOUT_DURATION = 10000;
 int enterButtonPin = 4; // This Pin Should ride 
 
 void selectPressed();
-void pulseRateSelected(int selection);
-void polaritySelected(int selection);
-void pulseCountSelected(int selection);
+void pulseRateSelected(MenuManager* menuMan, int selection);
+void polaritySelected(MenuManager* menuMan, int selection);
+void pulseCountSelected(MenuManager* menuMan, int selection);
 
 void MenuManager::initialize()
 {
@@ -82,16 +83,16 @@ void MenuManager::pushMenuWithID(byte menuID)
        displayMenu("Output 4 Options", menuOutputOptions, sizeof(menuOutputOptions)/sizeof(MenuItem));
        break;
     case menuIDRate:
-       displayOptionPropertyEditor("Pulse Rate", rates, 11, 0, &pulseRateSelected);
+       displayOptionPropertyEditor("Pulse Rate", rates, 11, 0, &pulseRateSelected, HIGH);
        break;
     case menuIDPolarity:
-       displayOptionPropertyEditor("Polarity", polaritySettings, 2, 0, &polaritySelected);
+       displayOptionPropertyEditor("Polarity", polaritySettings, 2, 0, &polaritySelected, HIGH);
        break;
     case menuIDPulseCount:
-       displayNumericPropertyEditor("Pulse Count", "Pulses", 1, 100, 2, 5, &pulseCountSelected, "Always Pulse");
+       displayNumericPropertyEditor("Pulse Count", "Pulses", 1, 100, 2, 5, &pulseCountSelected, "Always Pulse", HIGH);
        break;
     case menuIDPulseLength:
-       displayNumericPropertyEditor("Pulse Length", "ms", 10, 1000, 10, -1, &pulseCountSelected, "Automatic");
+       displayNumericPropertyEditor("Pulse Length", "ms", 10, 1000, 10, -1, &pulseCountSelected, "Automatic", HIGH);
        break;
   }
   
@@ -158,6 +159,9 @@ void MenuManager::processLoop()
             displayParameterOption(currentParameter);
           }
         }
+        if (parameterEditorUpdateOnChange) {
+          parameterSelectedCallback(this, currentMenuSelection);
+        }
       } else { // We are in a menu and we should select accordingly
         if (currentMenuSelection == menuItemCount - 1) {
           MenuItem exitItem = {"Exit", 222};
@@ -189,7 +193,7 @@ void MenuManager::selectPressed()
     return;     
   }
   if (parameterEditorActive) {
-    parameterSelectedCallback(currentMenuSelection);
+    parameterSelectedCallback(this, currentMenuSelection);
     popParameterEditor();
     return;
   }
@@ -267,7 +271,8 @@ void MenuManager::displayOptionPropertyEditor(String title,
                                      char* options[],
                                      int optionsCount,
                                      int initialChoice,
-                                     void (*selectCallback)(int))
+                                     void (*selectCallback)(MenuManager*, int),
+                                     boolean updateOnSettingChange)
 {
   menuTitleString = title;
   parameterEditorActive = HIGH;
@@ -282,6 +287,7 @@ void MenuManager::displayOptionPropertyEditor(String title,
   parameterHigh = 0;
   parameterLow = 0;
   parameterRoot = "";
+  parameterEditorUpdateOnChange = updateOnSettingChange;
 }
 
 void MenuManager::displayNumericPropertyEditor(String title, 
@@ -290,8 +296,9 @@ void MenuManager::displayNumericPropertyEditor(String title,
                                      int rangeHigh,
                                      int rangeLow,
                                      int initialValue,
-                                     void (*selectCallback)(int),
-                                     String optionalRootValue)
+                                     void (*selectCallback)(MenuManager*, int),
+                                     String optionalRootValue,
+                                     boolean updateOnSettingChange)
 {
   menuTitleString = title;
   parameterEditorActive = HIGH;
@@ -311,19 +318,59 @@ void MenuManager::displayNumericPropertyEditor(String title,
   parameterHigh = rangeHigh;
   parameterLow = rangeLow;
   parameterRoot = optionalRootValue;
+  parameterEditorUpdateOnChange = updateOnSettingChange;
 }
 
-void pulseRateSelected(int selection)
+void pulseRateSelected(MenuManager *menuMan, int selection)
 {
   debugPrintln("Pulse Rate selected");
+  float pulseRate = 0;
+  switch (selection) {
+    case 0:
+       pulseRate = 1;
+       break;
+    case 1:
+       pulseRate = 2;
+       break;
+    case 2:
+       pulseRate = 3;
+       break;
+    case 3:
+       pulseRate = 4;
+       break;
+    case 4:
+       pulseRate = 6;
+       break;
+    case 5:
+       pulseRate = 8;
+       break;
+    case 6:
+       pulseRate = .5;
+       break;
+    case 7:
+       pulseRate = .333;
+       break;
+    case 8:
+       pulseRate = .25;
+       break;
+    case 9:
+       pulseRate = .1667;
+       break;
+    case 10:
+       pulseRate = .125;
+       break;
+  }
+  int currentOutput = menuMan->menuHistory[0];
+  pedalPulseRateSetting[currentOutput] = pulseRate;
+  menuMan->tempoController->rePollSettings();
 }
 
-void pulseCountSelected(int selection)
+void pulseCountSelected(MenuManager *menuMan, int selection)
 {
   debugPrintln("Pulse Count selected");
 }
 
-void polaritySelected(int selection)
+void polaritySelected(MenuManager *menuMan, int selection)
 {
   debugPrintln("Polarity selected");
 }

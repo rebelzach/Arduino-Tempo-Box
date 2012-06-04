@@ -27,6 +27,7 @@ void TempoAppController::initialize()
   menuController.menuLCD = &lcd;
   menuController.menuEncoder = &myEnc;
   menuController.delegate = this;
+  menuController.tempoController = &tempoController;
   tempoController.initialize();
   tempoController.setTempoChangeCallback(tempoChanged);
   lcd.clear();
