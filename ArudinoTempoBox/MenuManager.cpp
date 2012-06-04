@@ -12,6 +12,7 @@ int const MENU_TIMEOUT_DURATION = 10000;
 int enterButtonPin = 4; // This Pin Should ride 
 
 void selectPressed();
+void pulseRateSelected(int selection);
 
 void MenuManager::initialize()
 {
@@ -40,11 +41,27 @@ MenuItem menuOutputOptions[4] = {{"Rate", menuIDRate},
                                 {"Polarity", menuIDPolarity},
                                 {"Pulse Count", menuIDPulseCount},
                                 {"Pulse Length", menuIDPulseLength}};
+char *rates[11] = {"1:1",
+                  "1:2",
+                  "1:3",
+                  "1:4",
+                  "1:6",
+                  "1:8",
+                  "2:1",
+                  "3:1",
+                  "4:1",
+                  "6:1",
+                  "8:1"};
+                  
+char *polaritySettings[2] = {"Normally Open",
+                             "Normally Closed"};
                                 
 void MenuManager::pushMenuWithID(byte menuID)
 {
   debugPrint("MENU ID:");
   debugPrintln(menuID);
+  debugPrint("MENU Level:");
+  debugPrintln(currentMenuLevel);
   switch (menuID)
   {
     case menuIDRoot:
@@ -63,13 +80,13 @@ void MenuManager::pushMenuWithID(byte menuID)
        displayMenu("Output 4 Options", menuOutputOptions, sizeof(menuOutputOptions)/sizeof(MenuItem));
        break;
     case menuIDRate:
-
+       displayOptionPropertyEditor("Pulse Rate", rates, 11, 0, &pulseRateSelected);
        break;
     case menuIDPolarity:
-
+       //displayOptionPropertyEditor("Pulse Rate", rates, 11, 0, pulseRateSelected);
        break;
     case menuIDPulseCount:
-
+    
        break;
     case menuIDPulseLength:
 
@@ -103,27 +120,30 @@ void MenuManager::processLoop()
     int newPosition = menuEncoder->read();
     if (abs(oldEncoderPosition - newPosition) > 3) { // check that the encoder has moved a notch at least
       resetMenuTimeout();
+      int menuItemCount = currentMenuCount + 1; // Items + "Exit"
       if (parameterEditorActive) { 
-        
+        menuItemCount = currentMenuCount; 
+      }
+      debugPrint("Menu Count:");
+      debugPrintln(menuItemCount);
+      int selectionDelta = (newPosition - oldEncoderPosition)/3;
+      debugPrint("Selection Delta:");
+      debugPrintln(selectionDelta);
+      int rawSelection = currentMenuSelection + selectionDelta;
+      currentMenuSelection = rawSelection % menuItemCount;
+      debugPrint("Moded Selection:");
+      debugPrintln(currentMenuSelection);
+      if (currentMenuSelection < 0) { // wrap properly for negative values
+        currentMenuSelection = menuItemCount + currentMenuSelection;
+      }
+      
+      debugPrint("Selection:");
+      debugPrintln(currentMenuSelection);
+      oldEncoderPosition = newPosition;
+      
+      if (parameterEditorActive) { 
+        displayParameterOption(parameterOptions[currentMenuSelection]);
       } else { // We are in a menu and we should select accordingly
-        
-        int menuItemCount = currentMenuCount + 1; // Items + "Exit"
-        debugPrint("Menu Count:");
-        debugPrintln(menuItemCount);
-        int selectionDelta = (newPosition - oldEncoderPosition)/3;
-        debugPrint("Selection Delta:");
-        debugPrintln(selectionDelta);
-        int rawSelection = currentMenuSelection + selectionDelta;
-        currentMenuSelection = rawSelection % menuItemCount;
-        debugPrint("Moded Selection:");
-        debugPrintln(currentMenuSelection);
-        if (currentMenuSelection < 0) { // wrap properly for negative values
-          currentMenuSelection = menuItemCount + currentMenuSelection;
-        }
-        
-        debugPrint("Selection:");
-        debugPrintln(currentMenuSelection);
-        
         if (currentMenuSelection == menuItemCount - 1) {
           MenuItem exitItem = {"Exit", 222};
           displayMenuItem(exitItem);
@@ -131,7 +151,7 @@ void MenuManager::processLoop()
           displayMenuItem(currentMenu[currentMenuSelection]);
         }
       }
-      oldEncoderPosition = newPosition;
+      
     }
     if (millis() > menuTimeoutTimer + MENU_TIMEOUT_DURATION)
       exitMenu();
@@ -151,14 +171,15 @@ void MenuManager::selectPressed()
     menuHistory[currentMenuLevel] = menuIDRoot;
     pushMenuWithID(menuIDRoot);
     delegate->menuBecameActive();
+    return;     
+  }
+  if (parameterEditorActive) {
+    parameterSelectedCallback(currentMenuSelection);
+    popParameterEditor();
     return;
   }
   if (currentMenuSelection == currentMenuCount) { // Exit
     popCurrentMenu();
-    return;
-  }
-  if (parameterEditorActive) {
-    popParameterEditor();
     return;
   }
   currentMenuLevel++;
@@ -188,6 +209,18 @@ void MenuManager::displayMenuItem(MenuItem item)
   menuLCD->print(item.title);
 }
 
+void MenuManager::displayParameterOption(String option)
+{
+  menuLCD->clear();
+  menuLCD->print(menuTitleString);
+  menuLCD->selectLine(2);
+  menuLCD->print(option);
+  if (parameterUnit.length()>0) {
+    menuLCD->print(" ");
+    menuLCD->print(parameterUnit);
+  }
+}
+
 void MenuManager::popCurrentMenu()
 {
   if (currentMenuLevel == 0) {
@@ -213,7 +246,43 @@ void MenuManager::exitMenu()
 
 void MenuManager::popParameterEditor()
 {
-  
+  debugPrintln("Popping parameter editor");
+  parameterEditorActive = LOW;
+  currentMenuLevel--;
+  pushMenuWithID(menuHistory[currentMenuLevel]);
+}
+
+void MenuManager::displayOptionPropertyEditor(String title, 
+                                     char* options[],
+                                     int optionsCount,
+                                     int initialChoice,
+                                     void (*selectCallback)(int))
+{
+  menuTitleString = title;
+  parameterEditorActive = HIGH;
+  parameterOptions = options;
+  parameterSelectedCallback = selectCallback;
+  currentMenuCount = optionsCount;
+  currentMenuSelection = initialChoice;
+  displayParameterOption(parameterOptions[initialChoice]);
+}
+
+void MenuManager::displayNumericPropertyEditor(String title, 
+                                     String unit,
+                                     String rootOption,
+                                     int incrementValue,
+                                     int rangeHigh,
+                                     int rangeLow,
+                                     int initialValue,
+                                     void (*selectCallback)(int),
+                                     String optionalRootValue)
+{
+  parameterSelectedCallback = selectCallback;
+}
+
+void pulseRateSelected(int selection)
+{
+  debugPrintln("Pulse Rate selected");
 }
 
 #endif

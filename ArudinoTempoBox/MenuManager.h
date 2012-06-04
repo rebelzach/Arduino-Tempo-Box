@@ -34,11 +34,16 @@ class MenuManager
     void exitMenu();
     
   private:
-    int menuHistory[MAX_MENU_LEVELS];
+    byte menuHistory[MAX_MENU_LEVELS];
     int currentMenuSelection;
     int currentMenuCount;
     boolean buttonState;
+    
     boolean parameterEditorActive;
+    void (*parameterSelectedCallback)(int);
+    char **parameterOptions;
+    String parameterUnit; 
+    
     byte currentMenuLevel;
     int oldEncoderPosition;
     String menuTitleString;
@@ -49,12 +54,12 @@ class MenuManager
     void resetMenuTimeout();
     void displayMenu(String title, MenuItem menuItems[], int itemCount);
     void displayMenuItem(MenuItem item);
+    void displayParameterOption(String parameter);
     void displayOptionPropertyEditor(String title, 
-                                     char* options,
+                                     char* options[],
                                      int optionsCount,
                                      int initialChoice,
-                                     void (*selectCallback)(int),
-                                     String optionalRootValue);
+                                     void (*selectCallback)(int));
     void displayNumericPropertyEditor(String title, 
                                      String unit,
                                      String rootOption,
