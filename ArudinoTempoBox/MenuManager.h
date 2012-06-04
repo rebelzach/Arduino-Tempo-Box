@@ -43,6 +43,10 @@ class MenuManager
     void (*parameterSelectedCallback)(int);
     char **parameterOptions;
     String parameterUnit; 
+    String parameterRoot;
+    int parameterHigh;
+    int parameterLow;
+    int parameterIncrement;
     
     byte currentMenuLevel;
     int oldEncoderPosition;
@@ -62,7 +66,6 @@ class MenuManager
                                      void (*selectCallback)(int));
     void displayNumericPropertyEditor(String title, 
                                      String unit,
-                                     String rootOption,
                                      int incrementValue,
                                      int rangeHigh,
                                      int rangeLow,

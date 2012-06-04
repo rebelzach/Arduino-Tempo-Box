@@ -13,6 +13,8 @@ int enterButtonPin = 4; // This Pin Should ride
 
 void selectPressed();
 void pulseRateSelected(int selection);
+void polaritySelected(int selection);
+void pulseCountSelected(int selection);
 
 void MenuManager::initialize()
 {
@@ -83,13 +85,13 @@ void MenuManager::pushMenuWithID(byte menuID)
        displayOptionPropertyEditor("Pulse Rate", rates, 11, 0, &pulseRateSelected);
        break;
     case menuIDPolarity:
-       //displayOptionPropertyEditor("Pulse Rate", rates, 11, 0, pulseRateSelected);
+       displayOptionPropertyEditor("Polarity", polaritySettings, 2, 0, &polaritySelected);
        break;
     case menuIDPulseCount:
-    
+       displayNumericPropertyEditor("Pulse Count", "Pulses", 1, 100, 2, 5, &pulseCountSelected, "Always Pulse");
        break;
     case menuIDPulseLength:
-
+       displayNumericPropertyEditor("Pulse Length", "ms", 10, 1000, 10, -1, &pulseCountSelected, "Automatic");
        break;
   }
   
@@ -121,7 +123,7 @@ void MenuManager::processLoop()
     if (abs(oldEncoderPosition - newPosition) > 3) { // check that the encoder has moved a notch at least
       resetMenuTimeout();
       int menuItemCount = currentMenuCount + 1; // Items + "Exit"
-      if (parameterEditorActive) { 
+      if (parameterEditorActive && parameterRoot.length() == 0) { 
         menuItemCount = currentMenuCount; 
       }
       debugPrint("Menu Count:");
@@ -141,8 +143,21 @@ void MenuManager::processLoop()
       debugPrintln(currentMenuSelection);
       oldEncoderPosition = newPosition;
       
-      if (parameterEditorActive) { 
-        displayParameterOption(parameterOptions[currentMenuSelection]);
+      if (parameterEditorActive) {
+        if (parameterUnit.length() == 0) {
+          displayParameterOption(parameterOptions[currentMenuSelection]);
+        } else {
+          if (parameterRoot.length() > 0 && currentMenuSelection == menuItemCount - 1) {
+            debugPrintln("Updating root param");
+            displayParameterOption(parameterRoot);
+          } else {
+            debugPrintln("Updating variable parameter");
+            String currentParameter = "";
+            int value = ((currentMenuSelection * parameterIncrement) + parameterLow);
+            currentParameter = currentParameter + value + " " + parameterUnit;
+            displayParameterOption(currentParameter);
+          }
+        }
       } else { // We are in a menu and we should select accordingly
         if (currentMenuSelection == menuItemCount - 1) {
           MenuItem exitItem = {"Exit", 222};
@@ -215,10 +230,6 @@ void MenuManager::displayParameterOption(String option)
   menuLCD->print(menuTitleString);
   menuLCD->selectLine(2);
   menuLCD->print(option);
-  if (parameterUnit.length()>0) {
-    menuLCD->print(" ");
-    menuLCD->print(parameterUnit);
-  }
 }
 
 void MenuManager::popCurrentMenu()
@@ -265,11 +276,16 @@ void MenuManager::displayOptionPropertyEditor(String title,
   currentMenuCount = optionsCount;
   currentMenuSelection = initialChoice;
   displayParameterOption(parameterOptions[initialChoice]);
+  
+  parameterUnit = "";
+  parameterIncrement = 0;
+  parameterHigh = 0;
+  parameterLow = 0;
+  parameterRoot = "";
 }
 
 void MenuManager::displayNumericPropertyEditor(String title, 
                                      String unit,
-                                     String rootOption,
                                      int incrementValue,
                                      int rangeHigh,
                                      int rangeLow,
@@ -277,12 +293,39 @@ void MenuManager::displayNumericPropertyEditor(String title,
                                      void (*selectCallback)(int),
                                      String optionalRootValue)
 {
+  menuTitleString = title;
+  parameterEditorActive = HIGH;
   parameterSelectedCallback = selectCallback;
+  currentMenuCount = (rangeHigh - rangeLow)/incrementValue;
+  currentMenuSelection = (initialValue - rangeLow)/incrementValue;
+  parameterUnit = unit;
+  parameterIncrement = incrementValue;
+  String initalParameter = "";
+  if (initialValue == -1) {
+    initalParameter = initalParameter + optionalRootValue;
+  } else {
+    initalParameter = initalParameter + initialValue + " " + unit;
+  }
+  
+  displayParameterOption(initalParameter);
+  parameterHigh = rangeHigh;
+  parameterLow = rangeLow;
+  parameterRoot = optionalRootValue;
 }
 
 void pulseRateSelected(int selection)
 {
   debugPrintln("Pulse Rate selected");
+}
+
+void pulseCountSelected(int selection)
+{
+  debugPrintln("Pulse Count selected");
+}
+
+void polaritySelected(int selection)
+{
+  debugPrintln("Polarity selected");
 }
 
 #endif
