@@ -9,13 +9,14 @@
 
 int outputAddresses[4] = {20,60,120,200};
 
-int const MENU_TIMEOUT_DURATION = 10000;
+int const MENU_TIMEOUT_DURATION = 20000;
 int enterButtonPin = 4; // This Pin Should ride 
 
 void selectPressed();
-void pulseRateSelected(MenuManager* menuMan, int selection);
-void polaritySelected(MenuManager* menuMan, int selection);
-void pulseCountSelected(MenuManager* menuMan, int selection);
+void pulseRateSelected(MenuManager* menuMan, int selection, boolean persist);
+void polaritySelected(MenuManager* menuMan, int selection, boolean persist);
+void pulseCountSelected(MenuManager* menuMan, int selection, boolean persist);
+void pulseLengthSelected(MenuManager *menuMan, int selection, boolean persist);
 
 void MenuManager::initialize()
 {
@@ -83,16 +84,28 @@ void MenuManager::pushMenuWithID(byte menuID)
        displayMenu("Output 4 Options", menuOutputOptions, sizeof(menuOutputOptions)/sizeof(MenuItem));
        break;
     case menuIDRate:
-       displayOptionPropertyEditor("Pulse Rate", rates, 11, 0, &pulseRateSelected, HIGH);
+    {
+       int currentRate = settingsManager->getRate(currentOutput());
+       displayOptionPropertyEditor("Pulse Rate", rates, 11, currentRate, &pulseRateSelected, HIGH);
+    }
        break;
     case menuIDPolarity:
-       displayOptionPropertyEditor("Polarity", polaritySettings, 2, 0, &polaritySelected, HIGH);
+    {
+       int currentPolarity = settingsManager->getPolarity(currentOutput());
+       displayOptionPropertyEditor("Polarity", polaritySettings, 2, currentPolarity, &polaritySelected, HIGH);
+    }
        break;
     case menuIDPulseCount:
-       displayNumericPropertyEditor("Pulse Count", "Pulses", 1, 100, 2, 5, &pulseCountSelected, "Always Pulse", HIGH);
+    {
+      int currentPulseCount = settingsManager->getPulseCount(currentOutput());
+      displayNumericPropertyEditor("Pulse Count", "Pulses", 1, 100, 2, currentPulseCount, &pulseCountSelected, "Always Pulse", HIGH);
+    }
        break;
     case menuIDPulseLength:
-       displayNumericPropertyEditor("Pulse Length", "ms", 10, 1000, 10, -1, &pulseCountSelected, "Automatic", HIGH);
+       {
+       int currentPulseLength = settingsManager->getPulseLength(currentOutput());
+       displayNumericPropertyEditor("Pulse Length", "ms", 10, 1000, 10, currentPulseLength, &pulseLengthSelected, "Automatic", HIGH);
+       }
        break;
   }
   
@@ -160,7 +173,7 @@ void MenuManager::processLoop()
           }
         }
         if (parameterEditorUpdateOnChange) {
-          parameterSelectedCallback(this, currentMenuSelection);
+          parameterSelectedCallback(this, currentMenuSelection, NO);
         }
       } else { // We are in a menu and we should select accordingly
         if (currentMenuSelection == menuItemCount - 1) {
@@ -193,7 +206,7 @@ void MenuManager::selectPressed()
     return;     
   }
   if (parameterEditorActive) {
-    parameterSelectedCallback(this, currentMenuSelection);
+    parameterSelectedCallback(this, currentMenuSelection, YES);
     popParameterEditor();
     return;
   }
@@ -271,7 +284,7 @@ void MenuManager::displayOptionPropertyEditor(String title,
                                      char* options[],
                                      int optionsCount,
                                      int initialChoice,
-                                     void (*selectCallback)(MenuManager*, int),
+                                     void (*selectCallback)(MenuManager*, int,boolean),
                                      boolean updateOnSettingChange)
 {
   menuTitleString = title;
@@ -296,7 +309,7 @@ void MenuManager::displayNumericPropertyEditor(String title,
                                      int rangeHigh,
                                      int rangeLow,
                                      int initialValue,
-                                     void (*selectCallback)(MenuManager*, int),
+                                     void (*selectCallback)(MenuManager*, int,boolean),
                                      String optionalRootValue,
                                      boolean updateOnSettingChange)
 {
@@ -321,58 +334,70 @@ void MenuManager::displayNumericPropertyEditor(String title,
   parameterEditorUpdateOnChange = updateOnSettingChange;
 }
 
-void pulseRateSelected(MenuManager *menuMan, int selection)
+void pulseRateSelected(MenuManager *menuMan, int selection, boolean persist)
 {
   debugPrintln("Pulse Rate selected");
-  float pulseRate = 0;
-  switch (selection) {
-    case 0:
-       pulseRate = 1;
-       break;
-    case 1:
-       pulseRate = 2;
-       break;
-    case 2:
-       pulseRate = 3;
-       break;
-    case 3:
-       pulseRate = 4;
-       break;
-    case 4:
-       pulseRate = 6;
-       break;
-    case 5:
-       pulseRate = 8;
-       break;
-    case 6:
-       pulseRate = .5;
-       break;
-    case 7:
-       pulseRate = .333;
-       break;
-    case 8:
-       pulseRate = .25;
-       break;
-    case 9:
-       pulseRate = .1667;
-       break;
-    case 10:
-       pulseRate = .125;
-       break;
+  int currentOutput = menuMan->currentOutput();
+  
+  if (persist) {
+    menuMan->settingsManager->setRate(selection, currentOutput);
+  } else {
+    debugPrintln("No Persist");
+    menuMan->settingsManager->setControllerRate(selection, currentOutput);
+    menuMan->settingsManager->refreshTempo();
   }
-  int currentOutput = menuMan->menuHistory[0];
-  pedalPulseRateSetting[currentOutput] = pulseRate;
-  menuMan->tempoController->rePollSettings();
 }
 
-void pulseCountSelected(MenuManager *menuMan, int selection)
+void pulseLengthSelected(MenuManager *menuMan, int selection, boolean persist)
 {
   debugPrintln("Pulse Count selected");
+  int currentOutput = menuMan->currentOutput();
+  int length = -1;
+  if (selection != menuMan->currentMenuCount) {
+    length = ((selection * menuMan->parameterIncrement) + menuMan->parameterLow);
+  }
+  if (persist) {
+    menuMan->settingsManager->setPulseLength(length, currentOutput);
+  } else {
+    debugPrintln("No Persist");
+    menuMan->settingsManager->setControllerPulseLength(length, currentOutput);
+    menuMan->settingsManager->refreshTempo();
+  }
 }
 
-void polaritySelected(MenuManager *menuMan, int selection)
+void pulseCountSelected(MenuManager *menuMan, int selection, boolean persist)
+{
+  debugPrintln("Pulse Count selected");
+  int currentOutput = menuMan->currentOutput();
+  int count = -1;
+  if (selection != menuMan->currentMenuCount) {
+    count = ((selection * menuMan->parameterIncrement) + menuMan->parameterLow);
+  }
+  if (persist) {
+    menuMan->settingsManager->setPulseCount(count, currentOutput);
+  } else {
+    debugPrintln("No Persist");
+    menuMan->settingsManager->setControllerPulseCount(count, currentOutput);
+    menuMan->settingsManager->refreshTempo();
+  }
+}
+
+void polaritySelected(MenuManager *menuMan, int selection, boolean persist)
 {
   debugPrintln("Polarity selected");
+  int currentOutput = menuMan->currentOutput();
+  if (persist) {
+    menuMan->settingsManager->setPolarity(selection, currentOutput);
+  } else {
+    debugPrintln("No Persist");
+    menuMan->settingsManager->setControllerPolarity(selection, currentOutput);
+    menuMan->settingsManager->refreshTempo();
+  }
+}
+
+int MenuManager::currentOutput()
+{
+  return menuHistory[0];
 }
 
 #endif

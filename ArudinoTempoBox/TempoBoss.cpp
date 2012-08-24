@@ -1,4 +1,3 @@
-
 #ifndef TEMPOBOSS_cpp
 #define TEMPOBOSS_cpp
 
@@ -7,8 +6,13 @@
 #include "TempoBoss.h"
 
 #include "Arduino.h"
+#include <SoftwareSerial.h>
 
-const int TAP_TEMPO_PIN = 7;
+const int MIDI_PIN = A4;
+SoftwareSerial midi =  SoftwareSerial(MIDI_PIN, MIDI_PIN);
+void noteOn(int cmd, int pitch, int velocity);
+
+int TAP_TEMPO_PIN = 7;
 int output1pin = 8;
 int output2pin = 9;
 int output3pin = 10;
@@ -24,8 +28,9 @@ const int encBlue = 11;
 
 #define TAP_TIMEOUT 2000000
 #define TAP_MINIMUM 8000
-#define TIMER_QUANTUM 100
+#define TIMER_QUANTUM 400 //100
 
+volatile int shouldPulse;
 volatile unsigned long averagePulseLength;
 volatile unsigned long microsecondInterval[4] = {0,0,0,0};
 volatile unsigned long microsecondCounter[4] = {0,0,0,0};
@@ -44,6 +49,7 @@ void TempoBoss::initialize()
   pinMode(output3pin, OUTPUT);
   pinMode(output4pin, OUTPUT);
   pinMode(4, INPUT);
+  pinMode(6, INPUT);
   pinMode(pedalPin1, OUTPUT);
   pinMode(pedalPin2, OUTPUT);
   pinMode(pedalPin3, OUTPUT);
@@ -63,6 +69,9 @@ void TempoBoss::initialize()
   Timer1.attachInterrupt(pulseInterrupt); // attach the service routine here
   tempoChangeCallback = NULL;
   setTempo(120);
+  shouldPulse = NO;
+  midi.setTX(A4);
+  midi.begin(31250);
 }
 
 float previousBeatLevel = 0;
@@ -73,6 +82,10 @@ float rangedTempo = .5;
 void TempoBoss::processLoop()
 {
   processPendingTempoTaps();
+  if (shouldPulse == 1) {
+    noteOn(176, 64, 127);
+    shouldPulse = 0;
+  }
   if (beatLevel != previousBeatLevel) {
     previousBeatLevel = beatLevel;
     analogWrite(encRed, 255 - (beatLevel * rangedTempo));
@@ -245,10 +258,10 @@ void TempoBoss::resetPulseCounters()
   pinStateBuffer[output2pin] = 1;
   pinStateBuffer[output3pin] = 1;
   pinStateBuffer[output4pin] = 1;
-  digitalWrite(output1pin, HIGH);
-  digitalWrite(output2pin, HIGH);
-  digitalWrite(output3pin, HIGH);
-  digitalWrite(output4pin, HIGH);
+  digitalWrite(output1pin, !pedalPulsePolaritySetting[0]);
+  digitalWrite(output2pin, !pedalPulsePolaritySetting[1]);
+  digitalWrite(output3pin, !pedalPulsePolaritySetting[2]);
+  digitalWrite(output4pin, !pedalPulsePolaritySetting[3]);
   pedalPulseCounter[0] = 0;
   pedalPulseCounter[1] = 0;
   pedalPulseCounter[2] = 0;
@@ -257,6 +270,7 @@ void TempoBoss::resetPulseCounters()
 }
 
 volatile unsigned long pwmUpdateCounter = 0;
+inline void incrementMidiCounter(int pulseIndex, int pin, int pedalPin);
 
 void pulseInterrupt() {
   microsecondCounter[0] += TIMER_QUANTUM;
@@ -279,8 +293,9 @@ void pulseInterrupt() {
   incrementPulseCounter(0, output1pin, pedalPin1);
   incrementPulseCounter(1, output2pin, pedalPin2);
   incrementPulseCounter(2, output3pin, pedalPin3);
-  incrementPulseCounter(3, output4pin, pedalPin4);
+  incrementMidiCounter(3, output4pin, pedalPin4);
 }
+inline void updatePins(int pin, int pedalPin);
 
 inline void incrementPulseCounter(int pulseIndex, int pin, int pedalPin)
 {
@@ -288,19 +303,45 @@ inline void incrementPulseCounter(int pulseIndex, int pin, int pedalPin)
     microsecondCounter[pulseIndex] = microsecondCounter[pulseIndex] - microsecondInterval[pulseIndex];
     
     pinStateBuffer[pin] = !pinStateBuffer[pin];
-    //bitWrite(pinStates, pulseIndex, pinStateBuffer[pin]);
-    digitalWrite(pin, pinStateBuffer[pin]);
-    if (pedalPulseCounter[pulseIndex] <= pedalPulseCountSetting[pulseIndex]) { // Should we pulse the pedal?
-      digitalWrite(pedalPin, (pinStateBuffer[pin]) ^ pedalPulsePolaritySetting[pulseIndex]); // sets the pin according to polarity
-      pedalPulseCounter[pulseIndex]++;
-    } else if (pedalPulseCounter[pulseIndex] == pedalPulseCountSetting[pulseIndex] + 1) {
-      digitalWrite(pedalPin, pedalPulsePolaritySetting[pulseIndex]); //make sure we always end on the right polarity setting
-    }
-  } else if (pinStateBuffer[pin] == HIGH && microsecondCounter[pulseIndex] > microsecondPulseLenSetting[pulseIndex]) {
-    pinStateBuffer[pin] = LOW;
-    digitalWrite(pin, pinStateBuffer[pin]);
+    updatePins(pin, pedalPin);
+  } else if (pinStateBuffer[pin] == 1 && microsecondCounter[pulseIndex] > microsecondPulseLenSetting[pulseIndex]) {
+    pinStateBuffer[pin] = 0;
+    updatePins(pin, pedalPin);
   }
   
+}
+
+inline void incrementMidiCounter(int pulseIndex, int pin, int pedalPin)
+{
+  if (microsecondCounter[pulseIndex] > microsecondInterval[pulseIndex]) {
+    microsecondCounter[pulseIndex] = microsecondCounter[pulseIndex] - microsecondInterval[pulseIndex];
+    
+    pinStateBuffer[pin] = !pinStateBuffer[pin];
+    shouldPulse = 1;
+    digitalWrite(pin, pinStateBuffer[pin]);
+  } else if (pinStateBuffer[pin] == 1 && microsecondCounter[pulseIndex] > microsecondPulseLenSetting[pulseIndex]) {
+    pinStateBuffer[pin] = 0;
+    digitalWrite(pin, pinStateBuffer[pin]);
+  }
+}
+
+inline void updatePins(int pin, int pedalPin)
+{
+  digitalWrite(pin, pinStateBuffer[pin]);
+  digitalWrite(pedalPin, (pinStateBuffer[pin]) ^ pedalPulsePolaritySetting[pulseIndex]);
+//  if (pedalPulseCounter[pulseIndex] <= pedalPulseCountSetting[pulseIndex]) { // Should we pulse the pedal?
+//    digitalWrite(pedalPin, (pinStateBuffer[pin]) ^ pedalPulsePolaritySetting[pulseIndex]); // sets the pin according to polarity
+//    pedalPulseCounter[pulseIndex]++;
+//  } else if (pedalPulseCounter[pulseIndex] == pedalPulseCountSetting[pulseIndex] + 1) { // After the last pulse
+//    digitalWrite(pedalPin, pedalPulsePolaritySetting[pulseIndex]); //make sure we always end on the right polarity setting
+//  }
+}
+
+void noteOn(int cmd, int pitch, int velocity) 
+{
+  midi.write(cmd);
+  midi.write(pitch);
+  midi.write(velocity);
 }
 
 #endif

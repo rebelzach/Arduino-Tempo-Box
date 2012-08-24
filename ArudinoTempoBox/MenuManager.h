@@ -5,6 +5,7 @@
 #include <serLCD.h>
 #include <Encoder.h>
 #include "TempoBoss.h"
+#include "SettingsManager.h"
 
 class MenuManagerDelegate {
   public:
@@ -29,22 +30,13 @@ class MenuManager
     serLCD *menuLCD;
     MenuManagerDelegate *delegate;
     TempoBoss *tempoController;
+    SettingsManager *settingsManager;
     long menuTimeoutTimer;
     
-    // methods
-    void initialize();
-    void processLoop();
-    void exitMenu();
-    
-  private:
-    
-    int currentMenuSelection;
     int currentMenuCount;
-    boolean buttonState;
-    
     boolean parameterEditorActive;
     boolean parameterEditorUpdateOnChange;
-    void (*parameterSelectedCallback)(MenuManager*,int);
+    void (*parameterSelectedCallback)(MenuManager*,int,boolean);
     char **parameterOptions;
     String parameterUnit; 
     String parameterRoot;
@@ -52,6 +44,17 @@ class MenuManager
     int parameterLow;
     int parameterIncrement;
     
+    // methods
+    int currentOutput();
+    void initialize();
+    void processLoop();
+    void exitMenu();
+    
+  private:
+    
+    int currentMenuSelection;
+    boolean buttonState;
+  
     byte currentMenuLevel;
     int oldEncoderPosition;
     String menuTitleString;
@@ -67,7 +70,7 @@ class MenuManager
                                      char* options[],
                                      int optionsCount,
                                      int initialChoice,
-                                     void (*selectCallback)(MenuManager*, int),
+                                     void (*selectCallback)(MenuManager*, int,boolean),
                                      boolean updateOnSettingChange);
     void displayNumericPropertyEditor(String title, 
                                      String unit,
@@ -75,7 +78,7 @@ class MenuManager
                                      int rangeHigh,
                                      int rangeLow,
                                      int initialValue,
-                                     void (*selectCallback)(MenuManager*, int),
+                                     void (*selectCallback)(MenuManager*, int,boolean),
                                      String optionalRootValue,
                                      boolean updateOnSettingChange);
     void pushMenuWithID(byte menuID);

@@ -11,6 +11,6 @@
 #define debugPrint(x) do { if (DEBUG) Serial.print(x); } while (0)
 #define debugPrintln(x) do { if (DEBUG) Serial.println(x); } while (0)
 #define BIG_LONG 4294967292
-#define ALWAYS_PULSE 50000
+#define ALWAYS_PULSE 5000
 
 #endif

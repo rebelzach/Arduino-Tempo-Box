@@ -24,8 +24,8 @@ void loop()
 #if DEBUG 
   loopCounter++;
   if (millis() - loopStartTime > 10000) {
-    debugPrint("Loop count per second: ");
-    debugPrintln(loopCounter/10);
+    Serial.print("Loop count per second: ");
+    Serial.println(loopCounter/10);
     loopStartTime = millis();
     loopCounter = 0;
   }
