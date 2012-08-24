@@ -10,6 +10,7 @@ class SettingsManager
     TempoBoss *tempoController;
     void resetAllSettings();
     void openPreset(int preset);
+    int getPreset();
     void setRate(int rate, int outputID);
     void setPulseLength(int pulseLength, int outputID);
     void setPulseCount(int pulseCount, int outputID);
@@ -25,6 +26,7 @@ class SettingsManager
     void setControllerPulseCount(int pulseCount, int output);
     void setControllerPolarity(int polarity, int output);
     void refreshTempo();
+    void processLoop();
   private:
     int currentPreset;
     void setRate(int rate, int outputID, int preset);
@@ -39,3 +41,4 @@ class SettingsManager
 };
 
 #endif
+

@@ -57,7 +57,7 @@ class MenuManager
   
     byte currentMenuLevel;
     int oldEncoderPosition;
-    String menuTitleString;
+    
     
     // methods
     MenuItem *currentMenu;

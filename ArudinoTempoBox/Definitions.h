@@ -10,6 +10,7 @@
 #define debugBegin() do { if (DEBUG) Serial.begin(115200); } while (0)
 #define debugPrint(x) do { if (DEBUG) Serial.print(x); } while (0)
 #define debugPrintln(x) do { if (DEBUG) Serial.println(x); } while (0)
+#define debugPrintMem() do { if (DEBUG) {Serial.print("MemoryFree"); Serial.println(freeMemory()); } } while (0)
 #define BIG_LONG 4294967292
 #define ALWAYS_PULSE 5000
 

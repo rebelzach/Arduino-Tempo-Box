@@ -6,6 +6,7 @@
 #include "Arduino.h"
 #include "MenuManager.h"
 #include "TempoAppController.h"
+#include "MemoryFree.h"
 
 int LCDpin = A5;
 serLCD lcd(LCDpin);
@@ -20,6 +21,7 @@ void TempoAppController::initialize()
 {
   debugBegin();
   delay(1000); //Wake Up
+  debugPrintMem();
   encoderOffset = 0;
   oldEncoderPosition = 0;
   menuController.initialize();
@@ -40,19 +42,19 @@ void TempoAppController::initialize()
   }
   tempoController.initialize();
   tempoController.setTempoChangeCallback(tempoChanged);
+  settingsManager.tempoController = &tempoController;
   settingsManager.openPreset(0);
   lcd.clear();
   lcd.print("Tempo Box"); 
-  delay(500); // See the Awesome startup text
-  lcd.clear();
-  lcd.print("   BPM: ");
-  lcd.print(120);
+  delay(500); // See the Awesome start up text
+  tempoChanged(120);
 }
 
 void TempoAppController::processLoop()
 {
   tempoController.processLoop();
   menuController.processLoop();
+  settingsManager.processLoop();
   if (menuController.menuActive) {
     //Do nothing for now
   } else {
@@ -84,6 +86,9 @@ void tempoChanged(float tempo)
   lcd.print("   BPM: ");
   int tempoInt = tempo;
   lcd.print(tempoInt);
+  lcd.selectLine(2);
+  lcd.print("   Preset: ");
+  lcd.print(settingsManager.getPreset() + 1); // +1 because of zero indexing
 }
 
 void TempoAppController::readEncoder()
@@ -97,12 +102,6 @@ void TempoAppController::readEncoder()
       tempoChanged(tempo);
       oldEncoderPosition = newPosition;
     }
-//  long newPosition = myEnc.read() - encoderOffset;
-//  if (newPosition != oldPosition) {
-//    oldPosition = newPosition;
-//    tempoController.setTempo((newPosition/4) + 120);
-//    tempoChanged((newPosition/4) + 120);
-//  }
 }
 
 #endif

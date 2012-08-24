@@ -7,6 +7,7 @@
 #include "MenuManager.h"
 #include <serLCD.h>
 #include <Encoder.h>
+extern void tempoChanged(float tempo);
 
 class TempoAppController: public MenuManagerDelegate
 {
@@ -24,3 +25,4 @@ class TempoAppController: public MenuManagerDelegate
 };
 
 #endif
+

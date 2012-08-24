@@ -6,6 +6,7 @@
 #include "SettingsManager.h"
 #include "TempoBoss.h"
 #include "Definitions.h"
+#include "TempoAppController.h"
 
 #define PRESET_COUNT 10
 #define OUTPUT_COUNT 4
@@ -25,6 +26,9 @@ void eepromWriteFloat(int address, float value);
 int addressForOutput(int output, int preset);
 int eepromReadInt(int address);
 
+const int INTERNAL_SWITCH_PIN = 13;
+const int EXTERNAL_JACK_PIN = 7;
+
 void SettingsManager::resetAllSettings()
 {
   for (byte preset = 0; preset < PRESET_COUNT; preset++) {
@@ -36,6 +40,34 @@ void SettingsManager::resetAllSettings()
     }
   }
   setTapInput(0, HIGH);
+}
+
+boolean presetSwitchState = LOW;
+
+void SettingsManager::processLoop()
+{
+  if (TAP_TEMPO_PIN == INTERNAL_SWITCH_PIN) { // This should only run when we are taking taps externally
+    return;
+  }
+  if (presetSwitchState == LOW) {
+    if (digitalRead(INTERNAL_SWITCH_PIN) == HIGH) {
+      presetSwitchState = HIGH;
+      if (currentPreset == 3) {
+        openPreset(0);
+      } else {
+        debugPrint("Swapping and increment:");
+        debugPrintln(currentPreset + 1);
+        openPreset(currentPreset + 1);
+      }
+      int tempoInt = tempoController->getTempo();
+      tempoChanged(tempoInt);
+    }
+  }
+  if (presetSwitchState == HIGH) {
+    if (digitalRead(INTERNAL_SWITCH_PIN) == LOW) {
+      presetSwitchState = LOW;
+    }
+  }
 }
 
 void SettingsManager::refreshTempo()
@@ -58,13 +90,13 @@ void SettingsManager::setTapInput(int tapInput, boolean persist)
   }
   switch(tapInput) {
     case 0:
-      TAP_TEMPO_PIN = 13;
+      TAP_TEMPO_PIN = INTERNAL_SWITCH_PIN;
       break;
     case 1:
-      TAP_TEMPO_PIN = 7;
+      TAP_TEMPO_PIN = EXTERNAL_JACK_PIN;
       break;
     default:
-      TAP_TEMPO_PIN = 13;
+      TAP_TEMPO_PIN = INTERNAL_SWITCH_PIN;
       break;
   }
 }
@@ -142,6 +174,10 @@ void SettingsManager::setControllerPolarity(int polarity, int output)
 
 void SettingsManager::openPreset(int preset)
 {
+  debugPrint("OpeningPreset:");
+  debugPrintln(preset);
+  pinMode(INTERNAL_SWITCH_PIN, INPUT);// A little redundant to set here but not harmful
+  pinMode(EXTERNAL_JACK_PIN, INPUT);
   currentPreset = preset;
   for (byte output = 0; output < OUTPUT_COUNT; output++) {
     setControllerRate(getRate(output, preset), output);
@@ -151,6 +187,11 @@ void SettingsManager::openPreset(int preset)
   }
   setTapInput(getTapInput(), LOW);
   refreshTempo();
+}
+
+int SettingsManager::getPreset()
+{
+  return currentPreset;
 }
 
 // PUBLIC
