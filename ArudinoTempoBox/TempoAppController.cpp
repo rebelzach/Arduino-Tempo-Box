@@ -13,7 +13,7 @@ Encoder myEnc(2, 3);
 MenuManager menuController;
 TempoBoss tempoController;
 SettingsManager settingsManager;
-
+int oldEncoderPosition;
 void tempoChanged(float tempo);
 
 void TempoAppController::initialize()
@@ -21,6 +21,7 @@ void TempoAppController::initialize()
   debugBegin();
   delay(1000); //Wake Up
   encoderOffset = 0;
+  oldEncoderPosition = 0;
   menuController.initialize();
   menuController.menuLCD = &lcd;
   menuController.menuEncoder = &myEnc;
@@ -68,12 +69,15 @@ long oldPosition = 0;
 
 void TempoAppController::menuBecameInactive()
 {
-  encoderOffset = myEnc.read() - oldPosition;
+  int oldEncoderPosition = myEnc.read();
   tempoChanged(tempoController.getTempo());
 }
 
 void tempoChanged(float tempo)
 {
+  if (menuController.menuActive) {
+    return;
+  }
   debugPrintln("Updating BPM on LCD");
   debugPrintln(tempo);
   lcd.clear();
@@ -84,12 +88,21 @@ void tempoChanged(float tempo)
 
 void TempoAppController::readEncoder()
 {
-  long newPosition = myEnc.read() - encoderOffset;
-  if (newPosition != oldPosition) {
-    oldPosition = newPosition;
-    tempoController.setTempo((newPosition/4) + 120);
-    tempoChanged((newPosition/4) + 120);
-  }
+    int newPosition = myEnc.read();
+    if (abs(oldEncoderPosition - newPosition) > 3) { // check that the encoder has moved a notch at least
+      int encoderDelta = (newPosition - oldEncoderPosition)/3;
+      int tempo = tempoController.getTempo() + encoderDelta;
+      tempoController.setTempo(tempo);
+      tempoController.restartOutputPulses();
+      tempoChanged(tempo);
+      oldEncoderPosition = newPosition;
+    }
+//  long newPosition = myEnc.read() - encoderOffset;
+//  if (newPosition != oldPosition) {
+//    oldPosition = newPosition;
+//    tempoController.setTempo((newPosition/4) + 120);
+//    tempoChanged((newPosition/4) + 120);
+//  }
 }
 
 #endif

@@ -12,6 +12,7 @@
 #define SETTINGS_ROOT_BYTE 50
 #define OUTPUT_BYTE_SPACING 20
 #define OUTPUT_SETTINGS_COUNT_SPACING 20
+#define TAP_INPUT_ADDRESS 38 //Not relative to a preset or SETTINGS_ROOT_BYTE
 
 #define RATE_ADDRESS 0
 #define PULSE_LENGTH_ADDRESS 4
@@ -31,14 +32,41 @@ void SettingsManager::resetAllSettings()
       setRate(0, output, preset);
       setPulseLength(-1, output, preset);
       setPulseCount(6, output, preset);
-      setPolarity(0, output, preset);
+      setPolarity(1, output, preset);
     }
   }
+  setTapInput(0, HIGH);
 }
 
 void SettingsManager::refreshTempo()
 {
    tempoController->rePollSettings();
+}
+
+int SettingsManager::getTapInput()
+{
+  return eepromReadInt(TAP_INPUT_ADDRESS);
+}
+    
+void SettingsManager::setTapInput(int tapInput, boolean persist)
+{
+  if (persist) {
+    int address = TAP_INPUT_ADDRESS;
+    if (eepromReadInt(address) != tapInput) {
+      eepromWriteInt(address, tapInput);
+    }
+  }
+  switch(tapInput) {
+    case 0:
+      TAP_TEMPO_PIN = 13;
+      break;
+    case 1:
+      TAP_TEMPO_PIN = 7;
+      break;
+    default:
+      TAP_TEMPO_PIN = 13;
+      break;
+  }
 }
 
 void SettingsManager::setControllerRate(int rateChoice, int output)
@@ -80,6 +108,7 @@ void SettingsManager::setControllerRate(int rateChoice, int output)
        break;
   }
   debugPrint("Updating Pulse Rate:");
+  debugPrintln(output);
   debugPrintln(pulseRate);
   pedalPulseRateSetting[output] = pulseRate;
 }
@@ -104,7 +133,7 @@ void SettingsManager::setControllerPulseCount(int pulseCount, int output)
   pedalPulseCountSetting[output] = pulseCount;
 }
 
-void SettingsManager::setControllerPolarity(boolean polarity, int output)
+void SettingsManager::setControllerPolarity(int polarity, int output)
 {
   debugPrint("Updating Polarity:");
   debugPrintln(polarity);
@@ -120,6 +149,7 @@ void SettingsManager::openPreset(int preset)
     setControllerPulseCount(getPulseCount(output, preset), output);
     setControllerPolarity(getPolarity(output, preset), output);
   }
+  setTapInput(getTapInput(), LOW);
   refreshTempo();
 }
 
@@ -202,27 +232,27 @@ int SettingsManager::getPulseCount(int outputID, int preset)
   return eepromReadInt(address);
 }
 // PUBLIC
-void SettingsManager::setPolarity(boolean polarity, int outputID)
+void SettingsManager::setPolarity(int polarity, int outputID)
 {
   setPolarity(polarity, outputID, currentPreset);
   setControllerPolarity(polarity, outputID);
   refreshTempo();
 }
 
-void SettingsManager::setPolarity(boolean polarity, int outputID, int preset)
+void SettingsManager::setPolarity(int polarity, int outputID, int preset)
 {
   int address = addressForOutput(outputID, preset) + POLARITY_ADDRESS;
-  if (EEPROM.read(address) != polarity) {
-    EEPROM.write(address, polarity);
+  if (eepromReadInt(address) != polarity) {
+    eepromWriteInt(address, polarity);
   }
 }
 
-boolean SettingsManager::getPolarity(int outputID)
+int SettingsManager::getPolarity(int outputID)
 {
   return getPolarity(outputID, currentPreset);
 }
 
-boolean SettingsManager::getPolarity(int outputID, int preset)
+int SettingsManager::getPolarity(int outputID, int preset)
 {
   int address = addressForOutput(outputID, preset) + POLARITY_ADDRESS;
   return EEPROM.read(address);
@@ -231,7 +261,7 @@ boolean SettingsManager::getPolarity(int outputID, int preset)
 int addressForOutput(int output, int preset)
 {
   int presetAddress = SETTINGS_ROOT_BYTE + (preset * OUTPUT_BYTE_SPACING * OUTPUT_COUNT);
-  int address = presetAddress + (output * SETTINGS_ROOT_BYTE);
+  int address = presetAddress + (output * OUTPUT_BYTE_SPACING);
   return address;
 }
 

@@ -17,6 +17,7 @@ void pulseRateSelected(MenuManager* menuMan, int selection, boolean persist);
 void polaritySelected(MenuManager* menuMan, int selection, boolean persist);
 void pulseCountSelected(MenuManager* menuMan, int selection, boolean persist);
 void pulseLengthSelected(MenuManager *menuMan, int selection, boolean persist);
+void inputSelected(MenuManager *menuMan, int selection, boolean persist);
 
 void MenuManager::initialize()
 {
@@ -33,10 +34,12 @@ const byte menuIDOutput1 = 1;
 const byte menuIDOutput2 = 2;
 const byte menuIDOutput3 = 3;
 const byte menuIDOutput4 = 4;
-MenuItem menuRoot[4] = {{"Output 1", menuIDOutput1},
+const byte menuIDTapInput = 5;
+MenuItem menuRoot[5] = {{"Output 1", menuIDOutput1},
                         {"Output 2", menuIDOutput2},
                         {"Output 3", menuIDOutput3},
-                        {"Output 4", menuIDOutput4}};
+                        {"Output 4", menuIDOutput4},
+                        {"Tap Input Jack", menuIDTapInput}};
 const byte menuIDRate = 7;
 const byte menuIDPolarity = 8;
 const byte menuIDPulseCount = 9;
@@ -59,6 +62,8 @@ char *rates[11] = {"1:1",
                   
 char *polaritySettings[2] = {"Normally Open",
                              "Normally Closed"};
+char *tapInputSettings[2] = {"Internal Switch",
+                             "External Jack"};
                                 
 void MenuManager::pushMenuWithID(byte menuID)
 {
@@ -83,6 +88,12 @@ void MenuManager::pushMenuWithID(byte menuID)
     case menuIDOutput4:
        displayMenu("Output 4 Options", menuOutputOptions, sizeof(menuOutputOptions)/sizeof(MenuItem));
        break;
+    case menuIDTapInput:
+    {
+       int currentInput = settingsManager->getTapInput();
+       displayOptionPropertyEditor("Tap Input", tapInputSettings, 2, currentInput, &inputSelected, HIGH);
+    }
+       break;   
     case menuIDRate:
     {
        int currentRate = settingsManager->getRate(currentOutput());
@@ -395,9 +406,16 @@ void polaritySelected(MenuManager *menuMan, int selection, boolean persist)
   }
 }
 
+void inputSelected(MenuManager *menuMan, int selection, boolean persist)
+{
+  debugPrint("Polarity selected");
+  debugPrintln(selection);
+  menuMan->settingsManager->setTapInput(selection, persist);
+}
+
 int MenuManager::currentOutput()
 {
-  return menuHistory[0];
+  return menuHistory[1] - 1;
 }
 
 #endif

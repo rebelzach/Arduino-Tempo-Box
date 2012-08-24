@@ -8,6 +8,7 @@ extern volatile unsigned long microsecondPulseLenSetting[];
 extern float pedalPulseRateSetting[];
 extern volatile int pedalPulseCountSetting[];
 extern volatile int pedalPulsePolaritySetting[];
+extern int TAP_TEMPO_PIN;
 
 void calculateAndSetIntervals(unsigned long quarterBeatPulseLength);
 void processPendingTempoTaps();
@@ -32,6 +33,7 @@ class TempoBoss
     void setTempo(float tempo);
     float getTempo();
     void rePollSettings();
+    void restartOutputPulses();
     
   private:
     float tempo;
