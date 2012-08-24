@@ -7,10 +7,10 @@
 #include "MenuManager.h"
 #include "TempoBoss.h"
 #include "MemoryFree.h"
-String *menuTitleString;
+String menuTitleString;
 
 int const MENU_TIMEOUT_DURATION = 20000;
-int enterButtonPin = 4; // This Pin Should ride 
+int enterButtonPin = 4; 
 
 void selectPressed();
 void pulseRateSelected(MenuManager* menuMan, int selection, boolean persist);
@@ -21,8 +21,6 @@ void inputSelected(MenuManager *menuMan, int selection, boolean persist);
 
 void MenuManager::initialize()
 {
-  parameterUnit = ""; 
-  parameterRoot = "";
   oldEncoderPosition = 0;
   currentMenuLevel = 0;
   currentMenuSelection = 0;
@@ -37,11 +35,11 @@ const byte menuIDOutput2 = 2;
 const byte menuIDOutput3 = 3;
 const byte menuIDOutput4 = 4;
 const byte menuIDTapInput = 5;
-MenuItem menuRoot[5] = {{"Output 1       ", menuIDOutput1},
-                        {"Output 2       ", menuIDOutput2},
-                        {"Output 3       ", menuIDOutput3},
-                        {"Output 4       ", menuIDOutput4},
-                        {"Tap Input Jack ", menuIDTapInput}};
+MenuItem menuRoot[5] = {{"Output 1", menuIDOutput1},
+                        {"Output 2", menuIDOutput2},
+                        {"Output 3", menuIDOutput3},
+                        {"Output 4", menuIDOutput4},
+                        {"Tap Input Jack", menuIDTapInput}};
 const byte menuIDRate = 7;
 const byte menuIDPolarity = 8;
 const byte menuIDPulseCount = 9;
@@ -77,19 +75,19 @@ void MenuManager::pushMenuWithID(byte menuID)
   switch (menuID)
   {
     case menuIDRoot:
-       displayMenu(String("Menu"), menuRoot, sizeof(menuRoot)/sizeof(MenuItem));
+       displayMenu("Menu", menuRoot, sizeof(menuRoot)/sizeof(MenuItem));
        break;
     case menuIDOutput1:
-       displayMenu(String("Output 1 Options"), menuOutputOptions, sizeof(menuOutputOptions)/sizeof(MenuItem));
+       displayMenu("Output 1 Options", menuOutputOptions, sizeof(menuOutputOptions)/sizeof(MenuItem));
        break;
     case menuIDOutput2:
-       displayMenu(String("Output 2 Options"), menuOutputOptions, sizeof(menuOutputOptions)/sizeof(MenuItem));
+       displayMenu("Output 2 Options", menuOutputOptions, sizeof(menuOutputOptions)/sizeof(MenuItem));
        break;
     case menuIDOutput3:
-       displayMenu(String("Output 3 Options"), menuOutputOptions, sizeof(menuOutputOptions)/sizeof(MenuItem));
+       displayMenu("Output 3 Options", menuOutputOptions, sizeof(menuOutputOptions)/sizeof(MenuItem));
        break;
     case menuIDOutput4:
-       displayMenu(String("Output 4 Options"), menuOutputOptions, sizeof(menuOutputOptions)/sizeof(MenuItem));
+       displayMenu("Output 4 Options", menuOutputOptions, sizeof(menuOutputOptions)/sizeof(MenuItem));
        break;
     case menuIDTapInput:
     {
@@ -243,15 +241,14 @@ void MenuManager::displayMenu(String title, MenuItem menuItems[], int itemCount)
   currentMenuCount = itemCount;
   currentMenu = menuItems;
   currentMenuSelection = 0;
-  menuTitleString = &String(title);
+  menuTitleString = title;
   displayMenuItem(menuItems[0]);
 }
 
 void MenuManager::displayMenuItem(MenuItem item)
 {
   menuLCD->clear();
-  menuLCD->selectLine(1);
-  menuLCD->print(*menuTitleString);
+  menuLCD->print(menuTitleString);
   menuLCD->selectLine(2);
   menuLCD->print(item.title);
 }
@@ -259,8 +256,7 @@ void MenuManager::displayMenuItem(MenuItem item)
 void MenuManager::displayParameterOption(String option)
 {
   menuLCD->clear();
-  menuLCD->selectLine(1);
-  menuLCD->print(*menuTitleString);
+  menuLCD->print(menuTitleString);
   menuLCD->selectLine(2);
   menuLCD->print(option);
 }
@@ -304,7 +300,7 @@ void MenuManager::displayOptionPropertyEditor(String title,
                                      boolean updateOnSettingChange)
 {
   
-  menuTitleString = &String(title);
+  menuTitleString = title;
   parameterEditorActive = HIGH;
   parameterOptions = options;
   parameterSelectedCallback = selectCallback;
@@ -330,7 +326,7 @@ void MenuManager::displayNumericPropertyEditor(String title,
                                      String optionalRootValue,
                                      boolean updateOnSettingChange)
 {
-  menuTitleString = &String(title);
+  menuTitleString = title;
   parameterEditorActive = HIGH;
   parameterSelectedCallback = selectCallback;
   currentMenuCount = (rangeHigh - rangeLow)/incrementValue;
@@ -339,11 +335,11 @@ void MenuManager::displayNumericPropertyEditor(String title,
   parameterIncrement = incrementValue;
   debugPrintln(optionalRootValue);
   String initalParameter = "";
-//  if (initialValue == -1) {
-//    initalParameter = initalParameter + optionalRootValue;
-//  } else {
-//    initalParameter = initalParameter + initialValue + " " + unit;
-//  }
+  if (initialValue == -1) {
+    initalParameter = initalParameter + optionalRootValue;
+  } else {
+    initalParameter = initalParameter + initialValue + " " + unit;
+  }
   
   displayParameterOption(initalParameter);
   parameterHigh = rangeHigh;

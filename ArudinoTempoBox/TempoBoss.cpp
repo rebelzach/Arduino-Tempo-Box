@@ -13,14 +13,14 @@ SoftwareSerial midi =  SoftwareSerial(MIDI_PIN, MIDI_PIN);
 void noteOn(int cmd, int pitch, int velocity);
 
 int TAP_TEMPO_PIN = 7; // This is controlled by the settings manager
-int output1pin = 12;
-int output2pin = 10;
-int output3pin = 9;
-int output4pin = 8;
-int pedalPin1 = A0;
-int pedalPin2 = A1;
-int pedalPin3 = A2;
-int pedalPin4 = A3;
+const int output1pin = 12;
+const int output2pin = 10;
+const int output3pin = 9;
+const int output4pin = 8;
+const int pedalPin1 = A0;
+const int pedalPin2 = A1;
+const int pedalPin3 = A2;
+const int pedalPin4 = A3;
 //int pedalPin1 = 12;
 //int pedalPin2 = 10;
 //int pedalPin3 = 9;
@@ -52,7 +52,6 @@ int pedalPulseCounter[4] = {0,0,0,0};
 int pinStateBuffer[4] =         {1,1,1,1};
 int previousPinStateBuffer[4] =      {0,0,0,0};
 int pulseStateBuffer[4] = {0,0,0,0};
-int midiPulseBuffer;
 
 void TempoBoss::initialize()
 {
@@ -101,10 +100,6 @@ void TempoBoss::processLoop()
     analogWrite(encRed, 255 - (beatLevel * rangedTempo));
     analogWrite(encGreen, 255 - (beatLevel * (1 - rangedTempo) * .5));
     analogWrite(encBlue, 255 - (beatLevel * (1 - rangedTempo)));
-  }
-  if (microsecondCounter[0] > microsecondPulseLenSetting[0]) {
-    debugPrint(pulseStateBuffer[0]);
-    debugPrintln("PULSE!");
   }
 }
 
@@ -192,7 +187,7 @@ void TempoBoss::restartOutputPulses()
   pulseStateBuffer[1] = 1;
   pulseStateBuffer[2] = 1;
   pulseStateBuffer[3] = 1;
-  midiPulseBuffer = 1;
+  shouldMIDIPulse = 1;
 }
 
 void TempoBoss::tempoTapped()
@@ -308,7 +303,7 @@ void TempoBoss::resetPulseCounters()
   pulseStateBuffer[2] = 1;
   pulseStateBuffer[3] = 1;
   beatCounter = 0;
-  midiPulseBuffer = 1;
+  shouldMIDIPulse = 1;
 }
 
 volatile unsigned long pwmUpdateCounter = 0;
@@ -338,16 +333,22 @@ void pulseInterrupt() {
   incrementMidiCounter(3, output4pin, pedalPin4);
 }
 inline void updatePins(int pin, int pedalPin, int outputIndex, int state);
-
+inline void updateMidi(int outputIndex);
 inline void incrementMidiCounter(int outputIndex, int pin, int pedalPin)
 {
-  if (midiPulseBuffer == 1) {
-    shouldMIDIPulse = 1;
-    midiPulseBuffer = 0;
-  } else if (microsecondCounter[outputIndex] > (microsecondInterval[outputIndex] * 2)) {
-    midiPulseBuffer = 1;
+  // This must be updated to match changes in incrementPulseCounter
+  if (pulseStateBuffer[outputIndex] == 1 && microsecondCounter[outputIndex] > microsecondPulseLenSetting[outputIndex]) {
+    pulseStateBuffer[outputIndex] = 0;
+    updatePins(pin, pedalPin, outputIndex, pulseStateBuffer[outputIndex]);
   }
-  incrementPulseCounter(outputIndex, pin, pedalPin);
+  if (microsecondCounter[outputIndex] > microsecondInterval[outputIndex]) {
+    pedalPulseCounter[outputIndex]++;
+    microsecondCounter[outputIndex] = microsecondCounter[outputIndex] - microsecondInterval[outputIndex];
+    pinStateBuffer[outputIndex] = !pinStateBuffer[outputIndex];
+    pulseStateBuffer[outputIndex] = pinStateBuffer[outputIndex];
+    updatePins(pin, pedalPin, outputIndex, pinStateBuffer[outputIndex]);
+    updateMidi(outputIndex);
+  }
 }
 
 inline void incrementPulseCounter(int outputIndex, int pin, int pedalPin)
@@ -362,6 +363,13 @@ inline void incrementPulseCounter(int outputIndex, int pin, int pedalPin)
     pinStateBuffer[outputIndex] = !pinStateBuffer[outputIndex];
     pulseStateBuffer[outputIndex] = pinStateBuffer[outputIndex];
     updatePins(pin, pedalPin, outputIndex, pinStateBuffer[outputIndex]);
+  }
+}
+
+inline void updateMidi(int outputIndex)
+{
+  if (pedalPulseCounter[outputIndex] <= pedalPulseCountSetting[outputIndex]) { // Should we pulse the pedal?
+    shouldMIDIPulse = pinStateBuffer[outputIndex];
   }
 }
 

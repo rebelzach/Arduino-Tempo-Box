@@ -8,7 +8,7 @@
 #include "TempoAppController.h"
 #include "MemoryFree.h"
 
-int LCDpin = A5;
+const int LCDpin = A5;
 serLCD lcd(LCDpin);
 Encoder myEnc(2, 3);
 MenuManager menuController;

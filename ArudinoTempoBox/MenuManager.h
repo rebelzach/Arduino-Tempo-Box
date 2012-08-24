@@ -14,7 +14,7 @@ class MenuManagerDelegate {
 };
 
 struct MenuItem {
-  char title[16];
+  char title[15];
   byte ID;
 };
 
