@@ -145,7 +145,6 @@ void TempoBoss::processPendingTempoTaps()
       tapsProcessed = YES;
       pulseIndex = 0;
       pulseBufferCount = 0;
-      Serial.println("Timed Out");
       return; // since we timed out
     }
     tempo = calculateTempo();
@@ -309,7 +308,8 @@ void TempoBoss::resetPulseCounters()
 volatile unsigned long pwmUpdateCounter = 0;
 inline void incrementMidiCounter(int pulseIndex, int pin, int pedalPin);
 
-void pulseInterrupt() {
+void pulseInterrupt() 
+{
   microsecondCounter[0] += TIMER_QUANTUM;
   microsecondCounter[1] += TIMER_QUANTUM;
   microsecondCounter[2] += TIMER_QUANTUM;

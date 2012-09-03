@@ -19,6 +19,7 @@
 #define PULSE_LENGTH_ADDRESS 4
 #define PULSE_COUNT_ADDRESS 6
 #define POLARITY_ADDRESS 9
+#define PRESET_TEMPO_ADDRESS 15
 
 void eepromWriteInt(int address, int value);
 float eepromReadFloat(int address);
@@ -29,6 +30,10 @@ int eepromReadInt(int address);
 const int INTERNAL_SWITCH_PIN = 13;
 const int EXTERNAL_JACK_PIN = 7;
 
+void SettingsManager::initialize()
+{
+  shouldListenForPresetChange = 1;
+}
 void SettingsManager::resetAllSettings()
 {
   for (byte preset = 0; preset < PRESET_COUNT; preset++) {
@@ -38,6 +43,7 @@ void SettingsManager::resetAllSettings()
       setPulseCount(6, output, preset);
       setPolarity(1, output, preset);
     }
+    setTempo(120.0, preset);
   }
   setTapInput(0, HIGH);
 }
@@ -46,12 +52,13 @@ boolean presetSwitchState = LOW;
 
 void SettingsManager::processLoop()
 {
-  if (TAP_TEMPO_PIN == INTERNAL_SWITCH_PIN) { // This should only run when we are taking taps externally
+  if (TAP_TEMPO_PIN == INTERNAL_SWITCH_PIN || shouldListenForPresetChange == 0) { // This should only run when we are taking taps externally
     return;
   }
   if (presetSwitchState == LOW) {
     if (digitalRead(INTERNAL_SWITCH_PIN) == HIGH) {
       presetSwitchState = HIGH;
+      setTempo(tempoController->getTempo()); // Try to set tempo immediately on change
       if (currentPreset == 3) {
         openPreset(0);
       } else {
@@ -185,6 +192,7 @@ void SettingsManager::openPreset(int preset)
     setControllerPulseCount(getPulseCount(output, preset), output);
     setControllerPolarity(getPolarity(output, preset), output);
   }
+  setControllerTempo(getTempo(preset));
   setTapInput(getTapInput(), LOW);
   refreshTempo();
 }
@@ -272,7 +280,38 @@ int SettingsManager::getPulseCount(int outputID, int preset)
   int address = addressForOutput(outputID, preset) + PULSE_COUNT_ADDRESS;
   return eepromReadInt(address);
 }
+
+void SettingsManager::setTempo(float tempo, int preset)
+{
+  int address = addressForOutput(0, preset) + PRESET_TEMPO_ADDRESS;
+  if (eepromReadFloat(address) != tempo) {
+    eepromWriteFloat(address, tempo);
+  }
+}
+
+float SettingsManager::getTempo(int preset)
+{
+  int address = addressForOutput(0, preset) + PRESET_TEMPO_ADDRESS;
+  return eepromReadFloat(address);
+}
+
 // PUBLIC
+
+void SettingsManager::setTempo(float tempo)
+{
+  setTempo(tempo, currentPreset);
+}
+
+float SettingsManager::getTempo()
+{
+  return getTempo(currentPreset);
+}
+
+void SettingsManager::setControllerTempo(float tempo)
+{
+  tempoController->setTempo(tempo);
+}
+
 void SettingsManager::setPolarity(int polarity, int outputID)
 {
   setPolarity(polarity, outputID, currentPreset);
@@ -296,7 +335,7 @@ int SettingsManager::getPolarity(int outputID)
 int SettingsManager::getPolarity(int outputID, int preset)
 {
   int address = addressForOutput(outputID, preset) + POLARITY_ADDRESS;
-  return EEPROM.read(address);
+  return eepromReadInt(address);
 }
 
 int addressForOutput(int output, int preset)

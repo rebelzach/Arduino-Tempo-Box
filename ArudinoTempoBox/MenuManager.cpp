@@ -9,7 +9,7 @@
 #include "MemoryFree.h"
 String menuTitleString;
 
-int const MENU_TIMEOUT_DURATION = 20000;
+int const MENU_TIMEOUT_DURATION = 10000;
 int enterButtonPin = 4; 
 
 void selectPressed();
@@ -60,8 +60,8 @@ char *rates[11] = {"1:1",
                   "6:1",
                   "8:1"};
                   
-char *polaritySettings[2] = {"Normally Open",
-                             "Normally Closed"};
+char *polaritySettings[2] = {"Normally Closed",
+                           "Normally Open"};
 char *tapInputSettings[2] = {"Internal Switch",
                              "External Jack"};
                                 
@@ -364,10 +364,9 @@ void pulseRateSelected(MenuManager *menuMan, int selection, boolean persist)
 
 void pulseLengthSelected(MenuManager *menuMan, int selection, boolean persist)
 {
-  debugPrintln("Pulse Count selected");
   int currentOutput = menuMan->currentOutput();
   int length = -1;
-  if (selection != menuMan->currentMenuCount) {
+  if (selection != menuMan->currentMenuCount && selection != -1) {
     length = ((selection * menuMan->parameterIncrement) + menuMan->parameterLow);
   }
   if (persist) {
@@ -384,7 +383,7 @@ void pulseCountSelected(MenuManager *menuMan, int selection, boolean persist)
   debugPrintln("Pulse Count selected");
   int currentOutput = menuMan->currentOutput();
   int count = -1;
-  if (selection != menuMan->currentMenuCount) {
+  if (selection != menuMan->currentMenuCount && selection != -1) {
     count = ((selection * menuMan->parameterIncrement) + menuMan->parameterLow);
   }
   if (persist) {
@@ -398,12 +397,10 @@ void pulseCountSelected(MenuManager *menuMan, int selection, boolean persist)
 
 void polaritySelected(MenuManager *menuMan, int selection, boolean persist)
 {
-  debugPrintln("Polarity selected");
   int currentOutput = menuMan->currentOutput();
   if (persist) {
     menuMan->settingsManager->setPolarity(selection, currentOutput);
   } else {
-    debugPrintln("No Persist");
     menuMan->settingsManager->setControllerPolarity(selection, currentOutput);
     menuMan->settingsManager->refreshTempo();
   }

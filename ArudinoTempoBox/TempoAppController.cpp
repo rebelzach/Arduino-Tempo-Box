@@ -16,6 +16,9 @@ TempoBoss tempoController;
 SettingsManager settingsManager;
 int oldEncoderPosition;
 void tempoChanged(float tempo);
+unsigned long tempoUpdatedTimer = 0;
+const int UPDATE_WAIT_DURATION = 2000; // This is the amount of time (millis) that must pass before the tempo is updated in the EEPROM, cuts down on EEPROM writes
+byte tempoUpdatedFlag = 0;
 
 void TempoAppController::initialize()
 {
@@ -43,11 +46,13 @@ void TempoAppController::initialize()
   tempoController.initialize();
   tempoController.setTempoChangeCallback(tempoChanged);
   settingsManager.tempoController = &tempoController;
-  settingsManager.openPreset(0);
+  settingsManager.initialize();
   lcd.clear();
   lcd.print("Tempo Box"); 
   delay(500); // See the Awesome start up text
-  tempoChanged(120);
+  settingsManager.openPreset(0);
+  tempoChanged(tempoController.getTempo());
+  tempoUpdatedFlag = 0;
 }
 
 void TempoAppController::processLoop()
@@ -60,19 +65,24 @@ void TempoAppController::processLoop()
   } else {
     readEncoder();
   }
+  if (tempoUpdatedFlag) {
+    if (millis() - tempoUpdatedTimer > UPDATE_WAIT_DURATION) {
+      tempoUpdatedFlag = 0;
+      settingsManager.setTempo(tempoController.getTempo());
+    }
+  }
 }
 
 void TempoAppController::menuBecameActive()
 {
-  // Do Nothing now, but you can't delete this function
+  settingsManager.shouldListenForPresetChange = 0; 
 }
-
-long oldPosition = 0;
 
 void TempoAppController::menuBecameInactive()
 {
-  int oldEncoderPosition = myEnc.read();
+  oldEncoderPosition = myEnc.read();
   tempoChanged(tempoController.getTempo());
+   settingsManager.shouldListenForPresetChange = 1; 
 }
 
 void tempoChanged(float tempo)
@@ -89,19 +99,21 @@ void tempoChanged(float tempo)
   lcd.selectLine(2);
   lcd.print("   Preset: ");
   lcd.print(settingsManager.getPreset() + 1); // +1 because of zero indexing
+  tempoUpdatedFlag = 1;
+  tempoUpdatedTimer = millis();
 }
 
 void TempoAppController::readEncoder()
 {
-    int newPosition = myEnc.read();
-    if (abs(oldEncoderPosition - newPosition) > 3) { // check that the encoder has moved a notch at least
-      int encoderDelta = (newPosition - oldEncoderPosition)/3;
-      int tempo = tempoController.getTempo() + encoderDelta;
-      tempoController.setTempo(tempo);
-      tempoController.restartOutputPulses();
-      tempoChanged(tempo);
-      oldEncoderPosition = newPosition;
-    }
+  int newPosition = myEnc.read();
+  if (abs(oldEncoderPosition - newPosition) > 3) { // check that the encoder has moved a notch at least
+    int encoderDelta = (newPosition - oldEncoderPosition)/3;
+    int tempo = tempoController.getTempo() + encoderDelta;
+    tempoController.setTempo(tempo);
+    tempoController.restartOutputPulses();
+    tempoChanged(tempo);
+    oldEncoderPosition = newPosition;
+  }
 }
 
 #endif
