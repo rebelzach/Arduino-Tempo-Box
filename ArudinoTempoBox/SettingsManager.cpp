@@ -59,7 +59,7 @@ void SettingsManager::processLoop()
     if (digitalRead(INTERNAL_SWITCH_PIN) == HIGH) {
       presetSwitchState = HIGH;
       setTempo(tempoController->getTempo()); // Try to set tempo immediately on change
-      if (currentPreset == 3) {
+      if (currentPreset == 5) {
         openPreset(0);
       } else {
         debugPrint("Swapping and increment:");

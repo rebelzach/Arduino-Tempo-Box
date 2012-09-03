@@ -60,8 +60,8 @@ char *rates[11] = {"1:1",
                   "6:1",
                   "8:1"};
                   
-char *polaritySettings[2] = {"Normally Closed",
-                           "Normally Open"};
+char *polaritySettings[2] = {"Normally Open",
+                           "Normally Closed"};
 char *tapInputSettings[2] = {"Internal Switch",
                              "External Jack"};
                                 
