@@ -41,7 +41,7 @@ void SettingsManager::resetAllSettings()
       setRate(0, output, preset);
       setPulseLength(-1, output, preset);
       setPulseCount(6, output, preset);
-      setPolarity(1, output, preset);
+      setPolarity(0, output, preset);
     }
     setTempo(120.0, preset);
   }
